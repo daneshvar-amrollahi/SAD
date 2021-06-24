@@ -3,8 +3,7 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
-
-//#include <bits/stdc++.h>
+#include <cassert>
 
 #include <unistd.h>
 
@@ -16,8 +15,8 @@
 #define MAX_TEAM 20
 #define MAX_SUPERVISOR 20
 #define PRICE 2
-#define WAIT_FOR_RESPONSE() sleep(4)
-
+#define WAIT_FOR_RESPONSE() sleep(3)
+#define MAX_ATTEMPTS 5
 
 using namespace std;
 
@@ -26,6 +25,13 @@ int current_time = 0;
 typedef int TimeSlot;
 typedef vector<TimeSlot> TimeTable;
 
+void connect() {
+	int attempts = rand() % MAX_ATTEMPTS;
+	for (int i = 0; i < attempts; ++i) {
+		cout << '.';
+		WAIT_FOR_RESPONSE();
+	}
+}
 
 class Payment
 {
@@ -42,6 +48,9 @@ public:
 		cout << "Enter credit card id: " << endl;
 		string line;
 		getline(cin, line);
+		cout << "Payment in process " << endl;
+		connect();
+		cout << '\n';
 		cout << "PAYMENT: Payment successful" << endl; 
 		return ++current_time;
 	}
@@ -71,7 +80,7 @@ public:
 	void pay(double cost, string link)
 	{
 		Payment payment = Payment(link);
-		cout << "CUSTOMER "  << cid << ": Paying at " << link << " ..." << endl;
+		cout << "CUSTOMER "  << cid << ": Paying at " << link << endl;
 
 
 		int date = payment.payRequest(cost);
@@ -156,6 +165,15 @@ public:
 	System()
 	{
 		
+	}
+
+	~System() {
+		for (auto c : customer)
+			delete c;
+		for (auto e : evaluator)
+			delete e;
+		for (auto t : moving_team)
+			delete t;
 	}
 
 	void addCustomer(int cid)
@@ -262,11 +280,12 @@ public:
 	void pay(double cost, int cid){
 
 		string link = "https://paypay.com/?cid=" + to_string(cid);
+		connect();
+		cout << '\n';
 
 		for (auto &c: customer)
 			if (c->getId() == cid)
 				c->pay(cost, link);
-
 	}
 
 	// moving team_id
