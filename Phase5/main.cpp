@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-
+#include <stringstream>
 
 #define NEEDS_EVALUATOR_IDX 7
 
@@ -64,32 +64,50 @@ public:
 
 	}
 
-	void addCustomer()
+	void addCustomer(int cid)
 	{
 
 	}
 
-	void addEvaluator()
+	void addEvaluator(int eid)
 	{
 
 	}
 
-	void addMovingTeam()
+	void addMovingTeam(int mid)
 	{
 
 	}
 
-	void selectTimeSlots()
+	void selectTimeSlots(int customer_id)
 	{
+		//random time slots
+		//customer ba folan id az beine in entekhab kon
+	}
+
+	//TODO Query handler
+
+	void handleQuery(string query)
+	{
+		stringstream ss(query);	
+		string query_type;	
+		bool has_evaluator;
+		int customer_id;
+
+		ss >> query_type >> has_evaluator >> customer_id;
+	}
+
+	void evaluate(int eid){
+		// be yaroo begoo evaluate kon
+	}
+
+	void pay(double cost , int cid){
 
 	}
 
-	void handleMovingRequest(string query)
-	{
-		cout << "SYSTEM: received query: " << query << endl;
-		bool needs_evaluator = stoi(query[NEEDS_EVALUATOR_IDX]);
-		
-		int id;
+	// moving team_id
+	void schedule(int mid , string date , string addresss){
+
 	}
 
 };
