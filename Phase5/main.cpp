@@ -1,10 +1,10 @@
-// #include <iostream>
-// #include <vector>
-// #include <string>
-// #include <sstream>
-// #include <algorithm>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <algorithm>
 
-#include <bits/stdc++.h>
+//#include <bits/stdc++.h>
 
 #include <unistd.h>
 
@@ -13,6 +13,8 @@
 #define MAX_CUSTOMERS 5
 #define MOVING "MOVING"
 #define MAX_EVALUATOR 20
+#define MAX_TEAM 20
+#define MAX_SUPERVISOR 20
 #define PRICE 2
 #define WAIT_FOR_RESPONSE() sleep(4)
 
@@ -88,6 +90,14 @@ public:
 		mid = _mid;
 	}
 
+	int status(TimeSlot date , string address , int cost){
+		//LOG
+		int remaining = rand() % 11;
+		int remaining_cost = (remaining * cost) / 100;
+
+		return remaining_cost;
+	}
+
 };
 
 class Evaluator
@@ -115,11 +125,20 @@ public:
 class MovingTeam
 {
 private:
+	int tid;
 	MovingSupervisor* supervisor;
 public:
-	MovingTeam(MovingSupervisor* _supervisor)
+	MovingTeam(int _tid , MovingSupervisor* _supervisor)
 	{
+		tid = _tid;
 		supervisor = _supervisor;
+	}
+	int getId(){
+		return tid;
+	}
+	int schedule(TimeSlot date , string address , int cost){
+		int remaining_cost = supervisor->status(date , address , cost);
+		return remaining_cost;
 	}
 };
 
@@ -149,9 +168,10 @@ public:
 		evaluator.push_back(new Evaluator(eid));
 	}
 
-	void addMovingTeam(int mid)
+	void addMovingTeam(int tid)
 	{
-
+		int mid = rand() % MAX_SUPERVISOR;
+		moving_team.push_back(new MovingTeam(tid , new MovingSupervisor(mid)));
 	}
 
 	
@@ -228,6 +248,8 @@ public:
 
 		current_time++;
 
+		schedule(slot , address , cost);
+
 	}
 
 	void evaluate(int eid, TimeSlot slot, string address){
@@ -248,8 +270,14 @@ public:
 	}
 
 	// moving team_id
-	void schedule(int mid , string date , string addresss){
-
+	void schedule(TimeSlot date , string address , int cost){
+		int tid = rand() % MAX_TEAM;	
+		//LOG
+		for (auto &t: moving_team)
+			if (t->getId() == tid){
+				int remaining_cost = t->schedule(date , address , cost);
+				cout << "SYSTEM Additional charge for customer : " << remaining_cost << endl;
+			}
 	}
 
 };
@@ -261,6 +289,9 @@ void init(System& sys) {
 
 	for (int i = 0 ; i < MAX_EVALUATOR ; i++)
 		sys.addEvaluator(i);
+
+	for (int i = 0 ; i < MAX_TEAM ; i++)
+		sys.addMovingTeam(i);
 }
 
 int main()
