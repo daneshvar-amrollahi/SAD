@@ -6,15 +6,45 @@
 
 #include <bits/stdc++.h>
 
+#include <unistd.h>
+
 #define NEEDS_EVALUATOR_IDX 7
 #define MAX_SLOTS 5
 #define MAX_CUSTOMERS 5
 #define MOVING "MOVING"
+#define MAX_EVALUATOR 20
+#define PRICE 2
+#define WAIT_FOR_RESPONSE() sleep(4)
+
 
 using namespace std;
 
+int current_time = 0;
+
 typedef int TimeSlot;
 typedef vector<TimeSlot> TimeTable;
+
+
+class Payment
+{
+private:
+	string link;
+public:
+	Payment(string _link)
+	{
+		link = _link;
+	}
+
+	int payRequest(int cost)
+	{
+		cout << "Enter credit card id: " << endl;
+		string line;
+		getline(cin, line);
+		cout << "PAYMENT: Payment successful" << endl; 
+		return ++current_time;
+	}
+};
+
 
 class Customer
 {
@@ -34,6 +64,16 @@ public:
 		string response;
 		getline(cin, response);
 		return stoi(response);
+	}
+
+	void pay(double cost, string link)
+	{
+		Payment payment = Payment(link);
+		cout << "CUSTOMER "  << cid << ": Paying at " << link << " ..." << endl;
+
+
+		int date = payment.payRequest(cost);
+		cout << "CUSTOMER " << cid << ": Payment Done. Date: " << date << endl;
 	}
 };
 
@@ -60,6 +100,16 @@ public:
 		eid = _eid;
 	}
 
+	int getId()
+	{
+		return eid;
+	}
+
+	void evaluate(TimeSlot date, string addresss)
+	{
+		cout << "EVALUATOR " << eid << ": Evaluation Done. Date: " << date << " Address: " << addresss << endl;
+		return;
+	}
 };
 
 class MovingTeam
@@ -86,7 +136,7 @@ private:
 public:
 	System()
 	{
-
+		
 	}
 
 	void addCustomer(int cid)
@@ -96,7 +146,7 @@ public:
 
 	void addEvaluator(int eid)
 	{
-
+		evaluator.push_back(new Evaluator(eid));
 	}
 
 	void addMovingTeam(int mid)
@@ -108,7 +158,7 @@ public:
 	TimeTable generateTimeslots() {
 		TimeTable res(MAX_SLOTS);
 		for (int i = 0; i < MAX_SLOTS; ++i)
-			res[i] = i;
+			res[i] = i + current_time;
 		random_shuffle(res.begin(), res.end());
 		return res;
 	}
@@ -157,17 +207,43 @@ public:
 		bool has_evaluator;
 		int customer_id;
 		string address;
-		ss >> has_evaluator >> customer_id >> address;
+		double good_capacity;
+		ss >> has_evaluator >> customer_id >> address >> good_capacity;
 
 		auto slot = selectTimeSlots(customer_id);
-			cout << "boom mf with timeslut " << slot << '\n';
+
+		current_time++;
+
+		if (has_evaluator)
+		{
+			int evaluator = rand() % MAX_EVALUATOR;
+			evaluate(evaluator, slot, address);
+		}
+
+		current_time++;
+
+		double cost = good_capacity * PRICE;
+
+		pay(cost, customer_id);
+
+		current_time++;
+
 	}
 
-	void evaluate(int eid){
-		// be yaroo begoo evaluate kon
+	void evaluate(int eid, TimeSlot slot, string address){
+		
+		for (auto &e: evaluator)
+			if (e->getId() == eid)
+				e->evaluate(slot, address);
 	}
 
-	void pay(double cost , int cid){
+	void pay(double cost, int cid){
+
+		string link = "https://paypay.com/?cid=" + to_string(cid);
+
+		for (auto &c: customer)
+			if (c->getId() == cid)
+				c->pay(cost, link);
 
 	}
 
@@ -179,21 +255,12 @@ public:
 };
 
 
-class Payment
-{
-private:
-	string link;
-public:
-	Payment(string _link)
-	{
-		link = _link;
-	}
-
-};
-
 void init(System& sys) {
 	for (int i = 0; i < MAX_CUSTOMERS; ++i)
 		sys.addCustomer(i);
+
+	for (int i = 0 ; i < MAX_EVALUATOR ; i++)
+		sys.addEvaluator(i);
 }
 
 int main()
