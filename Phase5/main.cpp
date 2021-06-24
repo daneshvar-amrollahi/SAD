@@ -1,8 +1,20 @@
-#include <iostream>
-#include <vector>
-#include <stringstream>
+// #include <iostream>
+// #include <vector>
+// #include <string>
+// #include <sstream>
+// #include <algorithm>
+
+#include <bits/stdc++.h>
 
 #define NEEDS_EVALUATOR_IDX 7
+#define MAX_SLOTS 5
+#define MAX_CUSTOMERS 5
+#define MOVING "MOVING"
+
+using namespace std;
+
+typedef int TimeSlot;
+typedef vector<TimeSlot> TimeTable;
 
 class Customer
 {
@@ -12,6 +24,16 @@ public:
 	Customer(int _cid)
 	{
 		cid = _cid;
+	}
+
+	int getId() {
+		return cid;
+	}
+
+	TimeSlot chooseTimeSlot() {
+		string response;
+		getline(cin, response);
+		return stoi(response);
 	}
 };
 
@@ -58,6 +80,9 @@ private:
 	vector <Customer*> customer;
 	vector <Evaluator*> evaluator;
 	vector <MovingTeam*> moving_team;
+
+	int evaluator_idx = 0;
+
 public:
 	System()
 	{
@@ -66,7 +91,7 @@ public:
 
 	void addCustomer(int cid)
 	{
-
+		customer.push_back(new Customer(cid));
 	}
 
 	void addEvaluator(int eid)
@@ -79,22 +104,63 @@ public:
 
 	}
 
-	void selectTimeSlots(int customer_id)
+	
+	TimeTable generateTimeslots() {
+		TimeTable res(MAX_SLOTS);
+		for (int i = 0; i < MAX_SLOTS; ++i)
+			res[i] = i;
+		random_shuffle(res.begin(), res.end());
+		return res;
+	}
+
+	string showTable(TimeTable& table) {
+		string res = "[";
+		bool flag = false;
+		for (auto t : table) {
+			if (flag)
+				res += ", ";
+			flag = true;
+			res += to_string(t);
+		}
+		res += "]";
+		return res;
+	}
+
+	TimeSlot selectTimeSlots(int customer_id)
 	{
-		//random time slots
-		//customer ba folan id az beine in entekhab kon
+		auto table = generateTimeslots();
+		cout << "Available timeslots for user " << customer_id << ": ";
+		cout << showTable(table) << '\n';
+
+		TimeSlot ret = -1;
+		for (auto& c : customer)
+			if (c->getId() == customer_id)
+				ret = c->chooseTimeSlot();
+
+		assert (ret != -1);
+		return ret;
 	}
 
 	//TODO Query handler
-
 	void handleQuery(string query)
 	{
 		stringstream ss(query);	
-		string query_type;	
+		string query_type;
+		ss >> query_type;
+
+		if (query_type == MOVING)
+			handleMoving(ss);
+
+	}
+
+	void handleMoving(stringstream& ss) {
 		bool has_evaluator;
 		int customer_id;
+		string address;
+		ss >> has_evaluator >> customer_id >> address;
 
-		ss >> query_type >> has_evaluator >> customer_id;
+		auto slot = selectTimeSlots(customer_id);
+			cout << "boom mf with timeslut " << slot << '\n';
 	}
 
 	void evaluate(int eid){
@@ -125,16 +191,18 @@ public:
 
 };
 
-
+void init(System& sys) {
+	for (int i = 0; i < MAX_CUSTOMERS; ++i)
+		sys.addCustomer(i);
+}
 
 int main()
 {
 	System system;
-	while (1)
-	{
-		string query;
-		cin >> query;
-		system.handleMovingRequest(query);
-	}
+	init(system);
+
+	string query;
+	while (getline(cin, query))
+		system.handleQuery(query);
 	return 0;
 }
