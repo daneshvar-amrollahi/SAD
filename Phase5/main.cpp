@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cassert>
+#include <ctime>
 #include <fstream>
 #include <unistd.h>
 
@@ -14,8 +15,8 @@
 #define MAX_EVALUATOR 20
 #define MAX_TEAM 20
 #define MAX_SUPERVISOR 20
-#define PRICE 2
-#define WAIT_FOR_RESPONSE() sleep(0)
+#define BASE_PRICE 2
+#define WAIT_FOR_RESPONSE() sleep(1)
 #define MAX_ATTEMPTS 5
 
 using namespace std;
@@ -25,6 +26,12 @@ int current_time = 0;
 typedef int TimeSlot;
 typedef vector<TimeSlot> TimeTable;
 
+void print_charline(char c, int time) {
+	for (int i = 0; i < time; ++i)
+		cout << c;
+	cout << '\n';
+}
+
 void connect() {
 	int attempts = rand() % MAX_ATTEMPTS;
 	for (int i = 0; i < attempts; ++i) {
@@ -32,9 +39,6 @@ void connect() {
 		WAIT_FOR_RESPONSE();
 	}
 }
-
-
-
 
 class Payment
 {
@@ -48,13 +52,19 @@ public:
 
 	int payRequest(int cost)
 	{
+		print_charline('-', 30);
 		cout << "Enter credit card id: " << endl;
 		string line;
 		getline(cin, line);
+
+		cout << "Enter password: " << endl;
+		getline(cin, line);
+
 		cout << "Payment in process " << endl;
 		connect();
 		cout << '\n';
 		cout << "PAYMENT: Payment successful" << endl; 
+		print_charline('-', 30);
 		return ++current_time;
 	}
 };
@@ -103,7 +113,6 @@ public:
 	}
 
 	int status(TimeSlot date , string address , int cost){
-		//LOG
 		int remaining = rand() % 11;
 		int remaining_cost = (remaining * cost) / 100;
 
@@ -224,16 +233,9 @@ public:
 	}
 };
 
-
 class System
 {
 private:
-	vector <Customer*> customer;
-	vector <Evaluator*> evaluator;
-	vector <MovingTeam*> moving_team;
-
-	int evaluator_idx = 0;
-
 	DAO* dao;
 
 public:
@@ -243,12 +245,7 @@ public:
 	}
 
 	~System() {
-		for (auto c : customer)
-			delete c;
-		for (auto e : evaluator)
-			delete e;
-		for (auto t : moving_team)
-			delete t;
+
 	}
 
 	void addCustomer(int cid)
@@ -259,7 +256,6 @@ public:
 	void addEvaluator(int eid)
 	{
 		dao->addEvaluator(eid);
-		evaluator.push_back(new Evaluator(eid));
 	}
 
 	void addMovingTeam(int tid)
@@ -310,6 +306,7 @@ public:
 		if (query_type == MOVING)
 			handleMoving(ss);
 
+		print_charline('=', 48);
 	}
 
 	void handleMoving(stringstream& ss) {
@@ -331,15 +328,16 @@ public:
 
 		current_time++;
 
-		double cost = good_capacity * PRICE;
-
+		double cost = good_capacity * BASE_PRICE;
 		pay(cost, customer_id);
 
 		current_time++;
-
 		schedule(slot , address , cost);
 
-		dao->printLog("REQUEST: Customer ID: " + to_string(customer_id) + " " + to_string(current_time));
+		string log = "REQUEST: Customer ID: " + to_string(customer_id);
+		log += " request_date: " + to_string(slot);
+		log += " cost: " + to_string(cost);
+		dao->printLog(log);
 
 	}
 
@@ -357,21 +355,24 @@ public:
 		connect();
 		cout << '\n';
 
-		for (auto &c: customer)
-			if (c->getId() == cid)
-				c->pay(cost, link);
+		auto c = dao->getCustomer(cid);
+		c->pay(cost, link);
 	}
 
-	// moving team_id
 	void schedule(TimeSlot date , string address , int cost){
-		int tid = rand() % MAX_TEAM;	
-		//LOG
-
+		int tid = rand() % MAX_TEAM;
 		MovingTeam* t = dao->getMovingTeam(tid);
 
 		int remaining_cost = t->schedule(date, address, cost);
-		cout << "SYSTEM Additional charge for customer : " << remaining_cost << endl;
+		cout << "SYSTEM Additional charge for customer: " << remaining_cost << endl;
 
+	}
+
+	void run()
+	{
+		string query;
+		while (getline(cin, query))
+			handleQuery(query);
 	}
 
 };
@@ -392,11 +393,9 @@ void init(System& sys) {
 
 int main()
 {
+	srand(time(0));
 	System system;
 	init(system);
-
-	string query;
-	while (getline(cin, query))
-		system.handleQuery(query);
+	system.run();
 	return 0;
 }
