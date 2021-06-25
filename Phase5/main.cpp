@@ -4,7 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cassert>
-
+#include <fstream>
 #include <unistd.h>
 
 #define NEEDS_EVALUATOR_IDX 7
@@ -15,7 +15,7 @@
 #define MAX_TEAM 20
 #define MAX_SUPERVISOR 20
 #define PRICE 2
-#define WAIT_FOR_RESPONSE() sleep(3)
+#define WAIT_FOR_RESPONSE() sleep(0)
 #define MAX_ATTEMPTS 5
 
 using namespace std;
@@ -32,6 +32,9 @@ void connect() {
 		WAIT_FOR_RESPONSE();
 	}
 }
+
+
+
 
 class Payment
 {
@@ -152,28 +155,20 @@ public:
 };
 
 
-class System
+
+class DAO
 {
 private:
 	vector <Customer*> customer;
 	vector <Evaluator*> evaluator;
 	vector <MovingTeam*> moving_team;
 
-	int evaluator_idx = 0;
-
+	string file_name;
 public:
-	System()
-	{
-		
-	}
 
-	~System() {
-		for (auto c : customer)
-			delete c;
-		for (auto e : evaluator)
-			delete e;
-		for (auto t : moving_team)
-			delete t;
+	DAO(string name)
+	{
+		file_name = name;
 	}
 
 	void addCustomer(int cid)
@@ -190,6 +185,86 @@ public:
 	{
 		int mid = rand() % MAX_SUPERVISOR;
 		moving_team.push_back(new MovingTeam(tid , new MovingSupervisor(mid)));
+	}
+
+
+	Customer* getCustomer(int cid)
+	{
+		for (auto& c : customer)
+			if (c->getId() == cid)
+				return c;  
+
+		return NULL;
+	}
+
+
+	MovingTeam* getMovingTeam(int tid)
+	{
+		for (auto &t: moving_team)
+			if (t->getId() == tid)
+				return t;
+		
+		return NULL;
+	}
+
+	Evaluator* getEvaluator(int eid)
+	{
+		for (auto &e: evaluator)
+			if (e->getId() == eid)
+				return e;
+
+		return NULL;
+	}
+
+	void printLog(string message)
+	{	
+		ofstream fout(file_name, ios_base::app);
+		fout << message << endl;
+		fout.close();
+	}
+};
+
+
+class System
+{
+private:
+	vector <Customer*> customer;
+	vector <Evaluator*> evaluator;
+	vector <MovingTeam*> moving_team;
+
+	int evaluator_idx = 0;
+
+	DAO* dao;
+
+public:
+	System()
+	{
+		dao = new DAO("log.txt");
+	}
+
+	~System() {
+		for (auto c : customer)
+			delete c;
+		for (auto e : evaluator)
+			delete e;
+		for (auto t : moving_team)
+			delete t;
+	}
+
+	void addCustomer(int cid)
+	{
+		dao->addCustomer(cid);
+	}
+
+	void addEvaluator(int eid)
+	{
+		dao->addEvaluator(eid);
+		evaluator.push_back(new Evaluator(eid));
+	}
+
+	void addMovingTeam(int tid)
+	{
+		dao->addMovingTeam(tid);
 	}
 
 	
@@ -220,13 +295,9 @@ public:
 		cout << "Available timeslots for user " << customer_id << ": ";
 		cout << showTable(table) << '\n';
 
-		TimeSlot ret = -1;
-		for (auto& c : customer)
-			if (c->getId() == customer_id)
-				ret = c->chooseTimeSlot();
+		Customer *c = dao->getCustomer(customer_id);
 
-		assert (ret != -1);
-		return ret;
+		return c->chooseTimeSlot();
 	}
 
 	//TODO Query handler
@@ -268,13 +339,16 @@ public:
 
 		schedule(slot , address , cost);
 
+		dao->printLog("REQUEST: Customer ID: " + to_string(customer_id) + " " + to_string(current_time));
+
 	}
 
 	void evaluate(int eid, TimeSlot slot, string address){
+	
+		Evaluator* e = dao->getEvaluator(eid);
+
+		e->evaluate(slot, address);
 		
-		for (auto &e: evaluator)
-			if (e->getId() == eid)
-				e->evaluate(slot, address);
 	}
 
 	void pay(double cost, int cid){
@@ -292,14 +366,17 @@ public:
 	void schedule(TimeSlot date , string address , int cost){
 		int tid = rand() % MAX_TEAM;	
 		//LOG
-		for (auto &t: moving_team)
-			if (t->getId() == tid){
-				int remaining_cost = t->schedule(date , address , cost);
-				cout << "SYSTEM Additional charge for customer : " << remaining_cost << endl;
-			}
+
+		MovingTeam* t = dao->getMovingTeam(tid);
+
+		int remaining_cost = t->schedule(date, address, cost);
+		cout << "SYSTEM Additional charge for customer : " << remaining_cost << endl;
+
 	}
 
 };
+
+
 
 
 void init(System& sys) {
